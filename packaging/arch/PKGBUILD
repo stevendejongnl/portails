@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Builds portails from the working tree of this repository (no source download).
+# Run `makepkg -f` in this folder, then `sudo pacman -U portails-*.pkg.tar.zst`.
+pkgname=portails
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="AI web portals as tabs, each tab with its own encrypted login (Qt WebEngine)"
+arch=('x86_64')
+license=('AGPL-3.0-or-later')
+depends=('qt6-base' 'qt6-webengine' 'qt6-webchannel' 'gtk3' 'libsecret' 'openssl')
+makedepends=('cmake' 'ninja')
+
+build() {
+  cmake -S "$startdir/../.." -B "$srcdir/build" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build "$srcdir/build"
+}
+
+check() {
+  QT_QPA_PLATFORM=offscreen ctest --test-dir "$srcdir/build" --output-on-failure
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install "$srcdir/build"
+}

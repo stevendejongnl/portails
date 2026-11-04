@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+[Desktop Entry]
+Type=Application
+Name=portails
+GenericName=AI portal tabs
+Comment=AI web portals as tabs, each with its own login
+Exec=portails
+Icon=portails
+Terminal=false
+Categories=Network;
+Keywords=AI;Claude;ChatGPT;Gemini;
+StartupWMClass=portails
