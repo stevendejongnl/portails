@@ -20,6 +20,12 @@ private slots:
         QVERIFY(staysInTab(QUrl("https://accounts.google.com/o/oauth2"), QUrl("https://claude.ai/")));
     }
 
+    void microsoftAccountPagesStayInTheCopilotTab()
+    {
+        QVERIFY(staysInTab(QUrl("https://account.microsoft.com/"), QUrl("https://copilot.com/")));
+        QVERIFY(staysInTab(QUrl("https://login.live.com/"), QUrl("https://copilot.com/")));
+    }
+
     void unrelatedSiteLeavesTheApp() { QVERIFY(!staysInTab(QUrl("https://example.org/"), QUrl("https://claude.ai/"))); }
 
     void lookAlikeSuffixIsNotAccepted()

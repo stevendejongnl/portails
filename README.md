@@ -19,7 +19,7 @@ A small desktop app that shows AI web portals as tabs in a sidebar. Each tab has
 - Remove deletes the tab and its saved login on this computer. It does not sign you out on the service. To end that session, sign out on the website.
 - Tabs stay loaded in the background when you switch. A running chat continues.
 
-Services in the catalog: Claude, ChatGPT, Gemini, Perplexity, Le Chat, Copilot, Grok, DeepSeek. "Custom URL" accepts any `https://` address.
+Services in the catalog: Claude, ChatGPT, Gemini, Perplexity, Mistral Vibe, Microsoft Copilot, Grok, DeepSeek. "Custom URL" accepts any `https://` address.
 
 The app uses Qt WebEngine, which is the Chromium engine, from the system Qt packages. It does not bundle a browser.
 
@@ -130,6 +130,10 @@ The app saves its data in `~/.local/share/portails/`.
 - `tabs.json` lists the tabs.
 - `profiles/<tab id>.vault` holds the encrypted login of one tab.
 
+Nothing else of a website is written to disk in plain form. The cookies, site storage and cache of a tab live in the RAM folder while the app runs. The profiles are made with Qt's profile builder, which sets those folders before the profile exists. Qt then creates no default folders next to the encrypted files. Builds before this change left an empty `QtWebEngine` folder in the data folder. The app removes it at start when it has no file in it, and never touches it when it has one.
+
+Outside the data folder, Qt and Mesa keep a GPU shader cache in `~/.cache`. It holds compiled graphics code and no website data.
+
 ## Add a service
 
 1. Add an entry to `platformCatalog()` in `src/platforms.cpp` (id, name, start URL). Change the array size in `src/platforms.h`.
@@ -153,7 +157,7 @@ Qt WebEngine puts a `QtWebEngine/x` token in its user agent. The app removes tha
 ## Known limits
 
 - Tested on Linux only.
-- The sign-ins of Claude (email and Google), ChatGPT and Gemini were tested. Perplexity, Le Chat, Copilot, Grok and DeepSeek are in the catalog but were not tested.
+- The sign-ins of Claude (email and Google), ChatGPT and Gemini were tested. Perplexity, Mistral Vibe, Microsoft Copilot, Grok and DeepSeek are in the catalog but were not tested.
 - Some sites refuse sign-in in embedded browsers. That depends on the site.
 - A popup of the site or of a sign-in provider (Google, Apple, Microsoft, OpenAI, X) opens in a small window with the same profile. Links to other sites open in the system browser.
 - The tests that start the whole app ran on a virtual display with `--disable-gpu`, not on a real screen with a GPU.

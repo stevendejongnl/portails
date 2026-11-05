@@ -8,7 +8,7 @@ namespace portails {
 namespace {
 
 const QStringList AUTH_HOST_SUFFIXES = {
-    "google.com", "apple.com", "microsoftonline.com", "live.com", "openai.com", "x.ai",
+    "google.com", "apple.com", "microsoft.com", "microsoftonline.com", "live.com", "openai.com", "x.ai",
 };
 
 }  // namespace

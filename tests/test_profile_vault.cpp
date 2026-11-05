@@ -182,6 +182,23 @@ private slots:
         QVERIFY(!QDir(vault.storagePath("one")).exists());
     }
 
+    void engineFolderWithOnlyEmptyFoldersIsRemoved()
+    {
+        QDir().mkpath(working->path() + "/QtWebEngine/tab-one/Cache");
+        QDir().mkpath(working->path() + "/QtWebEngine/tab-two");
+        QVERIFY(removeEmptyEngineFolder(working->path()));
+        QVERIFY(!QDir(working->path() + "/QtWebEngine").exists());
+    }
+
+    void engineFolderWithAFileIsNeverTouched()
+    {
+        writeText(working->path() + "/QtWebEngine/tab-one/Cookies", "keep");
+        QVERIFY(!removeEmptyEngineFolder(working->path()));
+        QVERIFY(QFile::exists(working->path() + "/QtWebEngine/tab-one/Cookies"));
+    }
+
+    void missingEngineFolderIsFine() { QVERIFY(!removeEmptyEngineFolder(working->path())); }
+
     void archiveWithAPathOutsideTheFolderIsRejected()
     {
         QByteArray archive;

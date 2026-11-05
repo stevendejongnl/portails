@@ -16,8 +16,8 @@ const std::array<Platform, 8> &platformCatalog()
         {"chatgpt", "ChatGPT", "https://chatgpt.com/"},
         {"gemini", "Gemini", "https://gemini.google.com/"},
         {"perplexity", "Perplexity", "https://www.perplexity.ai/"},
-        {"mistral", "Le Chat", "https://chat.mistral.ai/"},
-        {"copilot", "Copilot", "https://copilot.microsoft.com/"},
+        {"mistral", "Mistral Vibe", "https://chat.mistral.ai/"},
+        {"copilot", "Microsoft Copilot", "https://copilot.com/"},
         {"grok", "Grok", "https://grok.com/"},
         {"deepseek", "DeepSeek", "https://chat.deepseek.com/"},
     }};

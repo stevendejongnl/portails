@@ -9,6 +9,7 @@
 #include <QEventLoop>
 #include <QLocale>
 #include <QWebEngineProfile>
+#include <QWebEngineProfileBuilder>
 #include <QWebEngineView>
 
 namespace portails {
@@ -48,11 +49,14 @@ TabViews::TabViews(ProfileVault *vault, QStackedWidget *stack, QObject *parent)
 QWebEngineProfile *TabViews::createProfile(const QString &tabId)
 {
     vault->restore(tabId);
-    auto *profile = new QWebEngineProfile(QStringLiteral("tab-") + tabId, this);
-    profile->setPersistentStoragePath(vault->storagePath(tabId));
-    profile->setCachePath(vault->cachePath(tabId));
-    profile->setHttpCacheMaximumSize(CACHE_LIMIT_BYTES);
-    profile->setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies);
+    // The builder sets the paths before the profile exists. A profile made with only a name would first
+    // create empty folders in the default data location, next to the encrypted files.
+    QWebEngineProfileBuilder builder;
+    builder.setPersistentStoragePath(vault->storagePath(tabId))
+        .setCachePath(vault->cachePath(tabId))
+        .setHttpCacheMaximumSize(CACHE_LIMIT_BYTES)
+        .setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies);
+    auto *profile = builder.createProfile(QStringLiteral("tab-") + tabId, this);
     installChromeObject(profile);
     profile->setHttpAcceptLanguage(buildAcceptLanguage(QLocale::system().uiLanguages()));
     profile->setHttpUserAgent(chooseUserAgent(profile->httpUserAgent(), userAgentOverride()));

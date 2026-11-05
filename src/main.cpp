@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "app_controller.h"
 #include "backend.h"
+#include "catalog_refresh.h"
 #include "crypto.h"
 #include "keyring.h"
 #include "main_window.h"
@@ -119,6 +120,7 @@ int main(int argc, char *argv[])
     quitOnTerminationSignals(&application);
 
     const QString dataDirectory = privateDirectory(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    removeEmptyEngineFolder(dataDirectory);
     QLockFile instanceLock(dataDirectory + "/portails.lock");
     if (!instanceLock.tryLock(0)) {
         QTextStream(stderr) << "portails is already running\n";
@@ -138,7 +140,11 @@ int main(int argc, char *argv[])
     const QString storePath = dataDirectory + "/tabs.json";
     auto *siteStack = new QStackedWidget;
     auto *views = new TabViews(&vault, siteStack, &application);
-    auto *controller = new AppController(TabStore::load(storePath), storePath, views, &application);
+    TabStore store = TabStore::load(storePath);
+    if (refreshAddressesFromCatalog(store)) {
+        store.save(storePath);
+    }
+    auto *controller = new AppController(std::move(store), storePath, views, &application);
     auto *backend = new Backend(controller, &application);
 
     MainWindow window(backend, siteStack);

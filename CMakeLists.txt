@@ -15,6 +15,7 @@ pkg_check_modules(LIBSECRET REQUIRED IMPORTED_TARGET libsecret-1)
 # Everything that does not need a window. The tests link this library.
 add_library(portails_core STATIC
     src/platforms.cpp
+    src/catalog_refresh.cpp
     src/tab_store.cpp
     src/tab_inputs.cpp
     src/navigation_rules.cpp
@@ -61,6 +62,7 @@ function(add_portails_test name)
 endfunction()
 
 add_portails_test(test_platforms)
+add_portails_test(test_catalog_refresh)
 add_portails_test(test_tab_store)
 add_portails_test(test_tab_inputs)
 add_portails_test(test_navigation_rules)

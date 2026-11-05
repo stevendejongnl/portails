@@ -48,6 +48,10 @@ private:
     QByteArray legacyKey;
 };
 
+// Older builds left a QtWebEngine folder in the data folder. It held only empty folders.
+// It is removed when it has no file in it. A folder with files in it is never touched.
+bool removeEmptyEngineFolder(const QString &dataDirectory);
+
 // Archive format used inside the encrypted file. Exposed for tests.
 QByteArray packDirectory(const QDir &directory);
 bool unpackInto(const QByteArray &archive, const QDir &directory);

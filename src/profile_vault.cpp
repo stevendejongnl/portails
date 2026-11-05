@@ -72,6 +72,19 @@ QByteArray readMachineId()
     return {};
 }
 
+bool removeEmptyEngineFolder(const QString &dataDirectory)
+{
+    QDir folder(dataDirectory + "/QtWebEngine");
+    if (!folder.exists()) {
+        return false;
+    }
+    QDirIterator files(folder.absolutePath(), QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    if (files.hasNext()) {
+        return false;
+    }
+    return folder.removeRecursively();
+}
+
 QByteArray packDirectory(const QDir &directory)
 {
     QByteArray archive;
