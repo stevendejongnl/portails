@@ -156,6 +156,21 @@ def main():
         xdo("click", "1")
         time.sleep(1)
         results["copy button"] = (last("copy") == "ok", str(last("copy")))
+
+        # Developer tools: F12 opens a window of its own, and it is the same window the second time.
+        def tools_windows():
+            found = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "Developer tools"],
+                                   capture_output=True, text=True)
+            return found.stdout.split()
+
+        at(300, 300)
+        xdo("click", "1")
+        xdo("key", "F12")
+        time.sleep(3)
+        results["F12 opens developer tools"] = (len(tools_windows()) == 1, f"windows={tools_windows()}")
+        xdo("key", "--window", window, "ctrl+shift+i")
+        time.sleep(1)
+        results["Ctrl+Shift+I reuses the window"] = (len(tools_windows()) == 1, f"windows={tools_windows()}")
     finally:
         app.terminate()
         app.wait(15)

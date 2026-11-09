@@ -75,6 +75,7 @@ TabViews::OpenTab TabViews::openTab(const Tab &tab)
     created.view = new QWebEngineView;
     created.view->setPage(new SitePage(created.profile, url, created.view));
     enablePdfViewer(created.view->page());
+    installDevTools(created.view);
     created.view->setUrl(url);
     stack->addWidget(created.view);
     openTabs.insert(tab.id, created);
