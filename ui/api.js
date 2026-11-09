@@ -21,6 +21,18 @@ export const renameTab = (id, name) => invoke("rename_tab", { id, name });
 export const reloadTab = (id) => invoke("reload_tab", { id });
 export const openLink = (id, url) => invoke("open_link", { id, url });
 export const removeTab = (id) => invoke("remove_tab", { id });
+export const goBack = (id) => invoke("go_back", { id });
+export const goForward = (id) => invoke("go_forward", { id });
+export const goHome = (id) => invoke("go_home", { id });
+export const stopTab = (id) => invoke("stop_tab", { id });
+export const copyAddress = (id) => invoke("copy_address", { id });
+export const openDevTools = (id) => invoke("open_dev_tools", { id });
+
+// The backend pushes the state when a page navigates, without a command of the sidebar.
+export async function onStateChanged(callback) {
+  const backend = await backendReady;
+  backend.stateChanged.connect((json) => callback(JSON.parse(json)));
+}
 
 export const configureTab = (id, platformId, name, customUrl) =>
   invoke("configure_tab", { id, platformId, name, customUrl });

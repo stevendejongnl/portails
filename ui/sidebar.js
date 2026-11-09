@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { tabBadge } from "./badge.js";
 import { clear, el, svgDots } from "./dom.js";
+import { icon } from "./icons.js";
 import { openTabMenu } from "./menu.js";
 
 const DRAFT_LABEL = "New Tab";
@@ -42,17 +43,39 @@ function moreButton(tab, actions) {
   return button;
 }
 
+function navButton(name, label, onClick, isDisabled = false) {
+  const button = el("button", { className: "tab-nav-button", type: "button", "aria-label": label, title: label, disabled: isDisabled }, [icon(name)]);
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+// Back, forward, reload or stop, and home. They belong to the page that the tab shows now.
+function navigationRow(tab, actions) {
+  const nav = tab.nav || {};
+  return el("div", { className: "tab-nav", role: "toolbar", "aria-label": `Navigation for ${tab.name}` }, [
+    navButton("back", "Back", () => actions.back(tab), !nav.can_go_back),
+    navButton("forward", "Forward", () => actions.forward(tab), !nav.can_go_forward),
+    nav.loading ? navButton("stop", "Stop loading", () => actions.stop(tab)) : navButton("reload", "Reload", () => actions.reload(tab)),
+    navButton("home", "Home", () => actions.home(tab)),
+  ]);
+}
+
 function tabItem(state, tab, actions, renamingId) {
   const isRenaming = renamingId === tab.id;
+  const isActive = tab.id === state.active_id;
+  const row = [tabBadge(state, tab), isRenaming ? renameField(tab, actions) : tabLabel(tab), tab.url ? moreButton(tab, actions) : null];
   const item = el(
     "div",
     {
       className: "tab-item",
       role: "button",
       tabindex: "0",
-      "aria-current": String(tab.id === state.active_id),
+      "aria-current": String(isActive),
     },
-    [tabBadge(state, tab), isRenaming ? renameField(tab, actions) : tabLabel(tab), tab.url ? moreButton(tab, actions) : null],
+    [el("div", { className: "tab-row" }, row), isActive && tab.url ? navigationRow(tab, actions) : null],
   );
   item.addEventListener("click", () => actions.select(tab));
   item.addEventListener("keydown", (event) => {

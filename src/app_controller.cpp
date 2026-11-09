@@ -4,7 +4,10 @@
 #include "platforms.h"
 #include "tab_inputs.h"
 
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QHash>
+#include <QJsonArray>
 
 namespace portails {
 
@@ -14,6 +17,7 @@ AppController::AppController(TabStore store, const QString &storePath, TabViews 
     , storePath(storePath)
     , views(views)
 {
+    connect(views, &TabViews::navigationChanged, this, [this] { emit stateChanged(stateJson()); });
 }
 
 void AppController::start()
@@ -24,6 +28,13 @@ void AppController::start()
 QJsonObject AppController::stateJson() const
 {
     QJsonObject state = store.toJson();
+    QJsonArray tabs = state["tabs"].toArray();
+    for (QJsonValueRef tab : tabs) {
+        QJsonObject object = tab.toObject();
+        object["nav"] = views->navigationState(object["id"].toString());
+        tab = object;
+    }
+    state["tabs"] = tabs;
     state["platforms"] = platformsToJson();
     return state;
 }
@@ -45,6 +56,9 @@ QJsonObject AppController::handle(const QString &command, const QJsonObject &pay
         {"configure_tab", &AppController::configureTab}, {"rename_tab", &AppController::renameTab},
         {"select_tab", &AppController::selectTab},     {"reload_tab", &AppController::reloadTab},
         {"remove_tab", &AppController::removeTab},     {"open_link", &AppController::openLink},
+        {"go_back", &AppController::goBack},           {"go_forward", &AppController::goForward},
+        {"go_home", &AppController::goHome},           {"stop_tab", &AppController::stopTab},
+        {"copy_address", &AppController::copyAddress}, {"open_dev_tools", &AppController::openDevTools},
     };
     const auto match = commands.constFind(command);
     if (match == commands.constEnd()) {
@@ -109,6 +123,50 @@ QString AppController::openLink(const QJsonObject &payload)
     }
     views->load(*tab, QUrl(resolution.url));
     return store.select(tab->id);
+}
+
+QString AppController::goBack(const QJsonObject &payload)
+{
+    views->goBack(payload["id"].toString());
+    return {};
+}
+
+QString AppController::goForward(const QJsonObject &payload)
+{
+    views->goForward(payload["id"].toString());
+    return {};
+}
+
+QString AppController::goHome(const QJsonObject &payload)
+{
+    const Tab *tab = store.findTab(payload["id"].toString());
+    if (!tab || !tab->isConfigured()) {
+        return QStringLiteral("this tab has no site yet");
+    }
+    views->load(*tab, QUrl(tab->url));
+    return {};
+}
+
+QString AppController::stopTab(const QJsonObject &payload)
+{
+    views->stop(payload["id"].toString());
+    return {};
+}
+
+QString AppController::copyAddress(const QJsonObject &payload)
+{
+    const QString address = views->address(payload["id"].toString());
+    if (address.isEmpty()) {
+        return QStringLiteral("this tab has no page yet");
+    }
+    QGuiApplication::clipboard()->setText(address);
+    return {};
+}
+
+QString AppController::openDevTools(const QJsonObject &payload)
+{
+    views->openDevTools(payload["id"].toString());
+    return {};
 }
 
 QString AppController::removeTab(const QJsonObject &payload)

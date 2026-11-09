@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
 
+#include <functional>
+
 class QUrl;
 class QWebEnginePage;
 class QWebEngineView;
@@ -20,6 +22,7 @@ void enableClipboard(QWebEnginePage *page, const QUrl &tabUrl);
 
 // Opens the developer tools of a tab from F12, Ctrl+Shift+I and an Inspect entry in the right-click menu.
 // The tools open in their own window, with the profile of the tab, and close with the tab.
-void installDevTools(QWebEngineView *view);
+// The result opens the tools from code, for a menu entry.
+std::function<void()> installDevTools(QWebEngineView *view);
 
 }  // namespace portails

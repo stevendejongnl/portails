@@ -85,7 +85,7 @@ void enableClipboard(QWebEnginePage *page, const QUrl &tabUrl)
     });
 }
 
-void installDevTools(QWebEngineView *view)
+std::function<void()> installDevTools(QWebEngineView *view)
 {
     const auto devToolsView = std::make_shared<QPointer<QWebEngineView>>();
     const auto open = [view, devToolsView] { showDevTools(view, *devToolsView); };
@@ -105,6 +105,7 @@ void installDevTools(QWebEngineView *view)
         });
         menu->popup(view->mapToGlobal(position));
     });
+    return open;
 }
 
 }  // namespace portails

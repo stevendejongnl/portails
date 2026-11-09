@@ -12,6 +12,9 @@ Backend::Backend(AppController *controller, QObject *parent)
     : QObject(parent)
     , controller(controller)
 {
+    connect(controller, &AppController::stateChanged, this, [this](const QJsonObject &state) {
+        emit stateChanged(QString::fromUtf8(QJsonDocument(state).toJson(QJsonDocument::Compact)));
+    });
 }
 
 QString Backend::call(const QString &command, const QString &payloadJson)

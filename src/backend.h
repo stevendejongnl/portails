@@ -17,6 +17,10 @@ public:
 
     Q_INVOKABLE QString call(const QString &command, const QString &payloadJson);
 
+signals:
+    // The new state as JSON, pushed to the sidebar when a page navigates.
+    void stateChanged(const QString &stateJson);
+
 private:
     AppController *controller;
 };

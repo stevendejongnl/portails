@@ -7,7 +7,10 @@
 #include "user_agent.h"
 
 #include <QEventLoop>
+#include <QKeySequence>
 #include <QLocale>
+#include <QShortcut>
+#include <QWebEngineHistory>
 #include <QWebEngineProfile>
 #include <QWebEngineProfileBuilder>
 #include <QWebEngineView>
@@ -75,7 +78,9 @@ TabViews::OpenTab TabViews::openTab(const Tab &tab)
     created.view = new QWebEngineView;
     created.view->setPage(new SitePage(created.profile, url, created.view));
     enablePdfViewer(created.view->page());
-    installDevTools(created.view);
+    created.openDevTools = installDevTools(created.view);
+    watchNavigation(tab.id, created.view);
+    installNavigationShortcuts(tab, created.view);
     created.view->setUrl(url);
     stack->addWidget(created.view);
     openTabs.insert(tab.id, created);
@@ -100,6 +105,87 @@ void TabViews::reload(const QString &tabId)
     }
 }
 
+void TabViews::watchNavigation(const QString &tabId, QWebEngineView *view)
+{
+    const auto notify = [this, tabId] { emit navigationChanged(tabId); };
+    connect(view, &QWebEngineView::loadStarted, this, [this, tabId, notify] {
+        loadingTabs.insert(tabId);
+        notify();
+    });
+    connect(view, &QWebEngineView::loadFinished, this, [this, tabId, notify] {
+        loadingTabs.remove(tabId);
+        notify();
+    });
+    connect(view, &QWebEngineView::urlChanged, this, notify);
+}
+
+// Browser keys, for when the focus is in the site. They work on the view of one tab.
+void TabViews::installNavigationShortcuts(const Tab &tab, QWebEngineView *view)
+{
+    const auto add = [view](const QKeySequence &keys, const std::function<void()> &action) {
+        auto *shortcut = new QShortcut(keys, view);
+        shortcut->setContext(Qt::WidgetWithChildrenShortcut);
+        connect(shortcut, &QShortcut::activated, view, action);
+    };
+    const QUrl home(tab.url);
+    add(QKeySequence(Qt::ALT | Qt::Key_Left), [view] { view->back(); });
+    add(QKeySequence(Qt::ALT | Qt::Key_Right), [view] { view->forward(); });
+    add(QKeySequence(Qt::Key_F5), [view] { view->reload(); });
+    add(QKeySequence(Qt::CTRL | Qt::Key_R), [view] { view->reload(); });
+    add(QKeySequence(Qt::ALT | Qt::Key_Home), [view, home] { view->setUrl(home); });
+}
+
+void TabViews::goBack(const QString &tabId)
+{
+    const auto existing = openTabs.constFind(tabId);
+    if (existing != openTabs.constEnd()) {
+        existing->view->back();
+    }
+}
+
+void TabViews::goForward(const QString &tabId)
+{
+    const auto existing = openTabs.constFind(tabId);
+    if (existing != openTabs.constEnd()) {
+        existing->view->forward();
+    }
+}
+
+void TabViews::stop(const QString &tabId)
+{
+    const auto existing = openTabs.constFind(tabId);
+    if (existing != openTabs.constEnd()) {
+        existing->view->stop();
+    }
+}
+
+void TabViews::openDevTools(const QString &tabId)
+{
+    const auto existing = openTabs.constFind(tabId);
+    if (existing != openTabs.constEnd() && existing->openDevTools) {
+        existing->openDevTools();
+    }
+}
+
+QString TabViews::address(const QString &tabId) const
+{
+    const auto existing = openTabs.constFind(tabId);
+    return existing == openTabs.constEnd() ? QString() : existing->view->url().toString();
+}
+
+QJsonObject TabViews::navigationState(const QString &tabId) const
+{
+    const auto existing = openTabs.constFind(tabId);
+    if (existing == openTabs.constEnd()) {
+        return {};
+    }
+    const QWebEngineHistory *history = existing->view->history();
+    return {{"can_go_back", history->canGoBack()},
+            {"can_go_forward", history->canGoForward()},
+            {"loading", loadingTabs.contains(tabId)},
+            {"host", existing->view->url().host()}};
+}
+
 void TabViews::closeTab(const QString &tabId)
 {
     const auto existing = openTabs.constFind(tabId);
@@ -108,6 +194,7 @@ void TabViews::closeTab(const QString &tabId)
     }
     const OpenTab closing = *existing;
     openTabs.remove(tabId);
+    loadingTabs.remove(tabId);
     stack->removeWidget(closing.view);
     delete closing.view->page();
     delete closing.view;

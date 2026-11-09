@@ -50,6 +50,12 @@ const sidebarActions = {
     changed ? apply(api.renameTab(tab.id, name)) : render();
   },
   reload: (tab) => apply(api.reloadTab(tab.id)),
+  back: (tab) => apply(api.goBack(tab.id)),
+  forward: (tab) => apply(api.goForward(tab.id)),
+  home: (tab) => apply(api.goHome(tab.id)),
+  stop: (tab) => apply(api.stopTab(tab.id)),
+  copyAddress: (tab) => apply(api.copyAddress(tab.id)),
+  openDevTools: (tab) => apply(api.openDevTools(tab.id)),
   openLink: async (tab, url) => {
     try {
       state = await api.openLink(tab.id, url);
@@ -68,6 +74,15 @@ const setupHandlers = {
   cancel: () => apply(api.removeTab(draft.tabId)),
   submit: () => apply(api.configureTab(draft.tabId, draft.platformId, draft.name, draft.customUrl || null)),
 };
+
+// A page navigated. Only the sidebar is drawn again, so a name that is being typed in the
+// setup screen or in a rename field keeps its focus.
+api.onStateChanged((next) => {
+  state = next;
+  if (renamingId === null) {
+    renderSidebar(tabList, state, sidebarActions, renamingId);
+  }
+});
 
 async function start() {
   installMenuDismissal();

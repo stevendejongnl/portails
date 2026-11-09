@@ -8,6 +8,7 @@ tabs of the user are not touched. The page reports what it saw to this script ov
 Usage: tests/gui/input_check.py [path/to/portails]   (needs X11, xdotool, python3)
 """
 import http.server
+import urllib.request
 import json
 import os
 import subprocess
@@ -23,6 +24,7 @@ body{margin:0;background:#fff;color:#000;font:24px sans-serif;height:6000px}
 #text{position:absolute;left:20px;top:120px;width:600px}
 </style>
 <button id=copy>Copy link</button>
+<a id=next href="/two" style="position:absolute;left:20px;top:400px">second page</a>
 <p id=text>alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima</p>
 <script>
 const report = (what, value) => fetch("/report", {method: "POST", body: JSON.stringify({what, value})});
@@ -35,7 +37,7 @@ report("textbox", [textBox.left, textBox.top, textBox.width, textBox.height].joi
 addEventListener("mousedown", (event) => report("mousedown", event.clientX + "," + event.clientY));
 addEventListener("scroll", () => report("scroll", scrollY));
 document.addEventListener("selectionchange", () => report("selection", String(getSelection())));
-report("loaded", innerWidth + "x" + innerHeight);
+report("loaded", location.pathname);
 </script>"""
 
 reports = []
@@ -59,6 +61,34 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 def xdo(*args):
     return subprocess.run(["xdotool", *args], capture_output=True, text=True, check=True).stdout.strip()
+
+
+class Sidebar:
+    """Runs scripts in the sidebar page of portails through the remote debugging port of Qt."""
+
+    def __init__(self, port):
+        from websockets.sync.client import connect
+        end = time.time() + 15
+        while True:
+            try:
+                targets = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json"))
+                page = next(t for t in targets if t["url"].startswith("qrc:/ui/index.html"))
+                break
+            except Exception:
+                if time.time() > end:
+                    raise
+                time.sleep(0.3)
+        self.socket = connect(page["webSocketDebuggerUrl"])
+        self.counter = 0
+
+    def run(self, expression):
+        self.counter += 1
+        self.socket.send(json.dumps({"id": self.counter, "method": "Runtime.evaluate",
+                                     "params": {"expression": expression, "returnByValue": True}}))
+        while True:
+            reply = json.loads(self.socket.recv())
+            if reply.get("id") == self.counter:
+                return reply["result"]["result"].get("value")
 
 
 def last(what):
@@ -88,6 +118,8 @@ def main():
     with open(os.path.join(data, "tabs.json"), "w") as file:
         json.dump(tabs, file)
     env = dict(os.environ, XDG_DATA_HOME=os.path.join(home, "data"), XDG_RUNTIME_DIR=home)
+    debug_port = 9333 + os.getpid() % 500
+    env["QTWEBENGINE_REMOTE_DEBUGGING"] = str(debug_port)
     app = subprocess.Popen([binary], env=env, stderr=subprocess.DEVNULL)
     results = {}
     try:
@@ -95,7 +127,13 @@ def main():
             print("FAIL: the test page never loaded")
             return 1
         time.sleep(2)  # the window must be mapped and settled before it can be focused
-        window = xdo("search", "--sync", "--onlyvisible", "--pid", str(app.pid)).splitlines()[0]
+        def area(candidate):
+            size = xdo("getwindowgeometry", "--shell", candidate)
+            values = dict(line.split("=") for line in size.splitlines() if "=" in line)
+            return int(values["WIDTH"]) * int(values["HEIGHT"])
+
+        candidates = xdo("search", "--sync", "--onlyvisible", "--pid", str(app.pid)).splitlines()
+        window = max(candidates, key=area)  # the main window, not the splash or a tool window
         subprocess.run(["xdotool", "windowfocus", window], check=False)
         time.sleep(1)
 
@@ -171,6 +209,49 @@ def main():
         xdo("key", "--window", window, "ctrl+shift+i")
         time.sleep(1)
         results["Ctrl+Shift+I reuses the window"] = (len(tools_windows()) == 1, f"windows={tools_windows()}")
+
+        # Navigation: the sidebar shows back, forward, reload and home on the active tab.
+        sidebar = Sidebar(debug_port)
+        button = lambda label: f'document.querySelector(\'.tab-nav-button[aria-label="{label}"]\')'
+        results["nav row has four buttons"] = (
+            sidebar.run("document.querySelectorAll('.tab-item[aria-current=true] .tab-nav-button').length") == 4, "")
+        results["back starts disabled"] = (sidebar.run(f"{button('Back')}.disabled") is True, "")
+        reports.clear()
+        at(40, 415)
+        xdo("click", "1")
+        wait_for("loaded")
+        time.sleep(0.5)
+        results["link navigates to /two"] = (last("loaded") == "/two", str(last("loaded")))
+        results["back enables after navigating"] = (sidebar.run(f"{button('Back')}.disabled") is False, "pushed state")
+        reports.clear()
+        sidebar.run(f"{button('Back')}.click()")
+        wait_for("loaded")
+        results["back button goes back"] = (last("loaded") == "/", str(last("loaded")))
+        results["forward enables after back"] = (sidebar.run(f"{button('Forward')}.disabled") is False, "")
+        reports.clear()
+        sidebar.run(f"{button('Forward')}.click()")
+        wait_for("loaded")
+        reports.clear()
+        sidebar.run(f"{button('Home')}.click()")
+        wait_for("loaded")
+        results["home button loads the tab address"] = (last("loaded") == "/", str(last("loaded")))
+        reports.clear()
+        at(300, 300)
+        xdo("click", "1")
+        xdo("key", "alt+Left")
+        time.sleep(2)
+        results["Alt+Left goes back"] = (last("loaded") == "/two", str(last("loaded")))
+
+        # Menu: Home sits above Rename, and the arrow keys move between the rows.
+        sidebar.run("document.querySelector('.tab-item').dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: 30, clientY: 60}))")
+        time.sleep(0.5)
+        labels = sidebar.run("[...document.querySelectorAll('.menu-label')].map(n => n.textContent).join('|')")
+        results["menu order"] = (labels is not None and labels.startswith("Home|Rename|Reload"), str(labels))
+        sidebar.run("document.querySelector('.menu').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}))")
+        focused = sidebar.run("document.activeElement.textContent")
+        results["arrow down moves focus"] = (focused is not None and "Rename" in focused, str(focused))
+        inside = sidebar.run("(() => { const r = document.querySelector('.menu').getBoundingClientRect(); return r.bottom <= innerHeight && r.right <= innerWidth && r.left >= 0 && r.top >= 0; })()")
+        results["menu stays inside the window"] = (inside is True, "")
     finally:
         app.terminate()
         app.wait(15)

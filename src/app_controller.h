@@ -26,6 +26,9 @@ public:
 signals:
     void siteShowingChanged(bool isShowing);
 
+    // The state changed without a command of the sidebar, for example a page that finished loading.
+    void stateChanged(const QJsonObject &state);
+
 private:
     using Command = QString (AppController::*)(const QJsonObject &payload);
 
@@ -37,6 +40,12 @@ private:
     QString reloadTab(const QJsonObject &payload);
     QString openLink(const QJsonObject &payload);
     QString removeTab(const QJsonObject &payload);
+    QString goBack(const QJsonObject &payload);
+    QString goForward(const QJsonObject &payload);
+    QString goHome(const QJsonObject &payload);
+    QString stopTab(const QJsonObject &payload);
+    QString copyAddress(const QJsonObject &payload);
+    QString openDevTools(const QJsonObject &payload);
 
     QJsonObject stateJson() const;
     void applyLayout();

@@ -12,7 +12,7 @@ A small desktop app that shows AI web portals as tabs in a sidebar. Each tab has
 
 ## How it works
 
-- The sidebar on the left lists your tabs. The "+" button adds a tab. The "..." button on a tab opens a menu: Rename, Reload, Open link, Remove.
+- The sidebar on the left lists your tabs. The "+" button adds a tab. The active tab has back, forward, reload (stop while loading) and home buttons under its name. Alt+Left, Alt+Right, F5 or Ctrl+R and Alt+Home do the same from the keyboard. The "..." button, or a right-click, opens a menu: Home, Rename, Reload, Open link, Copy page address, Developer tools, Remove. F12 or Ctrl+Shift+I also opens the developer tools.
 - A new tab opens a setup screen. Choose a service, name the tab, then select "Open and sign in".
 - You sign in on the real website. The app never sees your password.
 - Each tab has its own Chromium profile. Two tabs on the same website do not share a login.
