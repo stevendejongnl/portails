@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "browser_features.h"
 
+#include "navigation_rules.h"
+
 #include <QFile>
 #include <QWebEnginePage>
+#include <QWebEnginePermission>
 #include <QWebEngineProfile>
 #include <QWebEngineScript>
 #include <QWebEngineScriptCollection>
@@ -41,6 +44,18 @@ void enablePdfViewer(QWebEnginePage *page)
 {
     page->settings()->setAttribute(QWebEngineSettings::PdfViewerEnabled, true);
     page->settings()->setAttribute(QWebEngineSettings::PluginsEnabled, true);
+}
+
+void enableClipboard(QWebEnginePage *page, const QUrl &tabUrl)
+{
+    page->settings()->setAttribute(QWebEngineSettings::JavascriptCanAccessClipboard, true);
+    page->settings()->setAttribute(QWebEngineSettings::JavascriptCanPaste, true);
+    QObject::connect(page, &QWebEnginePage::permissionRequested, page, [tabUrl](QWebEnginePermission permission) {
+        if (permission.permissionType() == QWebEnginePermission::PermissionType::ClipboardReadWrite
+            && staysInTab(permission.origin(), tabUrl)) {
+            permission.grant();
+        }
+    });
 }
 
 }  // namespace portails

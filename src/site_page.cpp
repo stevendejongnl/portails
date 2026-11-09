@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "site_page.h"
 
+#include "browser_features.h"
 #include "navigation_rules.h"
 
 #include <QDesktopServices>
@@ -25,6 +26,7 @@ SitePage::SitePage(QWebEngineProfile *profile, const QUrl &tabUrl, QObject *pare
     : QWebEnginePage(profile, parent)
     , tabUrl(tabUrl)
 {
+    enableClipboard(this, tabUrl);
 }
 
 QWebEnginePage *SitePage::createWindow(WebWindowType)
@@ -36,6 +38,7 @@ PopupPage::PopupPage(QWebEngineProfile *profile, const QUrl &tabUrl)
     : QWebEnginePage(profile, nullptr)
     , tabUrl(tabUrl)
 {
+    enableClipboard(this, tabUrl);
 }
 
 bool PopupPage::acceptNavigationRequest(const QUrl &url, NavigationType, bool isMainFrame)
